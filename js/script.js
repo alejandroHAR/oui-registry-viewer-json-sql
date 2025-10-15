@@ -87,6 +87,70 @@ function hideLoading() {
     document.getElementById('loadingSpinner').style.display = 'none';
 }
 
+// Leer parámetros de la URL
+function readParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    document.getElementById('searchInput').value = urlParams.get('search') || '';
+    document.getElementById('filterType').value = urlParams.get('type') || '';
+    document.getElementById('filterVendor').value = urlParams.get('vendor') || '';
+    currentPage = parseInt(urlParams.get('page')) || 1;
+}
+
+// Actualizar URL con parámetros actuales
+function updateURL() {
+    const urlParams = new URLSearchParams({
+        search: document.getElementById('searchInput').value,
+        type: document.getElementById('filterType').value,
+        vendor: document.getElementById('filterVendor').value,
+        page: currentPage
+    });
+    // Eliminar parámetros vacíos
+    for (let [key, value] of urlParams) {
+        if (!value) {
+            urlParams.delete(key);
+        }
+    }
+    const newUrl = urlParams.toString() ? `?${urlParams.toString()}` : window.location.pathname;
+    history.pushState({}, '', newUrl);
+}
+
+// Filtrar datos (lógica principal)
+function performFilter() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const selectedType = document.getElementById('filterType').value;
+    const vendorTerm = document.getElementById('filterVendor').value.toLowerCase();
+
+    // Filtro eficiente sin copias innecesarias
+    filteredData = data.filter(item => {
+        const matchesSearch = !searchTerm || 
+            item.oui.toLowerCase().includes(searchTerm) || 
+            item.vendor.toLowerCase().includes(searchTerm) ||
+            item.type.toLowerCase().includes(searchTerm);
+        const matchesType = !selectedType || item.type === selectedType;
+        const matchesVendor = !vendorTerm || item.vendor.toLowerCase().includes(vendorTerm);
+        return matchesSearch && matchesType && matchesVendor;
+    });
+
+    // Ajustar página si es inválida
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    if (currentPage > totalPages) {
+        currentPage = totalPages || 1;
+    }
+}
+
+// Aplicar filtros con loading y actualización de URL
+function applyFilters() {
+    showLoading();
+    currentPage = 1; // Reset a página 1 para nuevas búsquedas
+    performFilter();
+    setTimeout(() => {
+        renderResults();
+        renderPagination();
+        updateURL();
+        hideLoading();
+    }, 100); // Delay mínimo para spinner
+}
+
 // Inicializar la página
 document.addEventListener('DOMContentLoaded', function() {
     setLanguage('en');
@@ -104,6 +168,15 @@ function setupEventListeners() {
     const filterVendor = document.getElementById('filterVendor');
     filterVendor.addEventListener('input', debounce(applyFilters, 300));
     document.getElementById('filterType').addEventListener('change', applyFilters);
+
+    // Escuchar cambios en la historia del navegador
+    window.addEventListener('popstate', function() {
+        readParams();
+        performFilter();
+        renderResults();
+        renderPagination();
+        updateURL(); // Asegurar que la URL refleje el estado actual
+    });
 }
 
 // Debounce function para optimizar eventos de input
@@ -131,7 +204,11 @@ async function loadData() {
         filteredData = [...data]; // Solo una copia inicial
         loadStats();
         populateFilters();
-        applyFilters(); // Inicial con paginación
+        readParams();
+        performFilter();
+        renderResults();
+        renderPagination();
+        updateURL();
     } catch (e) {
         console.error(e);
         document.getElementById('statsRow').innerHTML = `
@@ -205,32 +282,6 @@ function populateFilters() {
         option.textContent = type;
         typeSelect.appendChild(option);
     });
-}
-
-// Aplicar filtros (optimizado: filtra una sola vez, usa includes para eficiencia)
-function applyFilters() {
-    showLoading();
-    currentPage = 1; // Reset a página 1
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const selectedType = document.getElementById('filterType').value;
-    const vendorTerm = document.getElementById('filterVendor').value.toLowerCase();
-
-    // Filtro eficiente sin copias innecesarias
-    filteredData = data.filter(item => {
-        const matchesSearch = !searchTerm || 
-            item.oui.toLowerCase().includes(searchTerm) || 
-            item.vendor.toLowerCase().includes(searchTerm) ||
-            item.type.toLowerCase().includes(searchTerm);
-        const matchesType = !selectedType || item.type === selectedType;
-        const matchesVendor = !vendorTerm || item.vendor.toLowerCase().includes(vendorTerm);
-        return matchesSearch && matchesType && matchesVendor;
-    });
-
-    setTimeout(() => {
-        renderResults();
-        renderPagination();
-        hideLoading();
-    }, 100); // Delay mínimo para spinner
 }
 
 // Renderizar resultados con paginación (solo renderiza itemsPerPage)
@@ -310,6 +361,7 @@ function changePage(page) {
     currentPage = page;
     renderResults();
     renderPagination();
+    updateURL();
 }
 
 // Descargar JSON completo (usa data original)
