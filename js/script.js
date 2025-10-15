@@ -1,4 +1,3 @@
-// js/script.js
 const translations = {
     en: {
         pageTitle: "IEEE IAB Registry Data Viewer",
@@ -48,7 +47,7 @@ let currentLang = 'en';
 let data = [];
 let filteredData = [];
 let currentPage = 1;
-const itemsPerPage = 50; // Reducido para optimizar renderizado
+const itemsPerPage = 50;
 
 function t(key) {
     return translations[currentLang][key];
@@ -74,11 +73,10 @@ function setLanguage(lang) {
     if (data.length > 0) {
         loadStats();
         populateFilters();
-        applyFilters(); // Reaplicar filtros para actualizar paginación
+        applyFilters();
     }
 }
 
-// Función para mostrar loading de filtros
 function showLoading() {
     document.getElementById('loadingSpinner').style.display = 'block';
 }
@@ -87,7 +85,6 @@ function hideLoading() {
     document.getElementById('loadingSpinner').style.display = 'none';
 }
 
-// Leer parámetros de la URL
 function readParams() {
     const urlParams = new URLSearchParams(window.location.search);
     document.getElementById('searchInput').value = urlParams.get('search') || '';
@@ -96,7 +93,6 @@ function readParams() {
     currentPage = parseInt(urlParams.get('page')) || 1;
 }
 
-// Actualizar URL con parámetros actuales
 function updateURL() {
     const urlParams = new URLSearchParams({
         search: document.getElementById('searchInput').value,
@@ -104,7 +100,6 @@ function updateURL() {
         vendor: document.getElementById('filterVendor').value,
         page: currentPage
     });
-    // Eliminar parámetros vacíos
     for (let [key, value] of urlParams) {
         if (!value) {
             urlParams.delete(key);
@@ -113,14 +108,11 @@ function updateURL() {
     const newUrl = urlParams.toString() ? `?${urlParams.toString()}` : window.location.pathname;
     history.pushState({}, '', newUrl);
 }
-
-// Filtrar datos (lógica principal)
 function performFilter() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const selectedType = document.getElementById('filterType').value;
     const vendorTerm = document.getElementById('filterVendor').value.toLowerCase();
 
-    // Filtro eficiente sin copias innecesarias
     filteredData = data.filter(item => {
         const matchesSearch = !searchTerm || 
             item.oui.toLowerCase().includes(searchTerm) || 
@@ -131,27 +123,24 @@ function performFilter() {
         return matchesSearch && matchesType && matchesVendor;
     });
 
-    // Ajustar página si es inválida
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     if (currentPage > totalPages) {
         currentPage = totalPages || 1;
     }
 }
 
-// Aplicar filtros con loading y actualización de URL
 function applyFilters() {
     showLoading();
-    currentPage = 1; // Reset a página 1 para nuevas búsquedas
+    currentPage = 1;
     performFilter();
     setTimeout(() => {
         renderResults();
         renderPagination();
         updateURL();
         hideLoading();
-    }, 100); // Delay mínimo para spinner
+    }, 100);
 }
 
-// Inicializar la página
 document.addEventListener('DOMContentLoaded', function() {
     setLanguage('en');
     document.getElementById('globalLoading').style.display = 'block';
@@ -164,22 +153,20 @@ function setupEventListeners() {
         setLanguage(e.target.value);
     });
     const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('input', debounce(applyFilters, 300)); // Debounce para optimizar búsquedas
+    searchInput.addEventListener('input', debounce(applyFilters, 300));
     const filterVendor = document.getElementById('filterVendor');
     filterVendor.addEventListener('input', debounce(applyFilters, 300));
     document.getElementById('filterType').addEventListener('change', applyFilters);
 
-    // Escuchar cambios en la historia del navegador
     window.addEventListener('popstate', function() {
         readParams();
         performFilter();
         renderResults();
         renderPagination();
-        updateURL(); // Asegurar que la URL refleje el estado actual
+        updateURL();
     });
 }
 
-// Debounce function para optimizar eventos de input
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -192,7 +179,6 @@ function debounce(func, wait) {
     };
 }
 
-// Cargar datos desde JSON
 async function loadData() {
     try {
         const response = await fetch('oui-vendors.json');
@@ -200,8 +186,8 @@ async function loadData() {
             throw new Error('Failed to load JSON file');
         }
         const jsonData = await response.json();
-        data = jsonData; // No copiar, usar referencia directa
-        filteredData = [...data]; // Solo una copia inicial
+        data = jsonData;
+        filteredData = [...data];
         loadStats();
         populateFilters();
         readParams();
@@ -223,7 +209,6 @@ async function loadData() {
     }
 }
 
-// Cargar estadísticas (eficiente, O(n))
 function loadStats() {
     const total = data.length;
     const uniqueVendors = new Set(data.map(item => item.vendor)).size;
@@ -270,7 +255,6 @@ function loadStats() {
     `;
 }
 
-// Poblar filtros (solo types, ya que vendors son muchos; vendor es input)
 function populateFilters() {
     const types = [...new Set(data.map(item => item.type))].sort();
 
@@ -284,7 +268,6 @@ function populateFilters() {
     });
 }
 
-// Renderizar resultados con paginación (solo renderiza itemsPerPage)
 function renderResults() {
     const tableBody = document.getElementById('tableBody');
     const resultsCount = document.getElementById('resultsCount');
@@ -304,7 +287,7 @@ function renderResults() {
     noResults.style.display = 'none';
     const start = (currentPage - 1) * itemsPerPage;
     const end = Math.min(start + itemsPerPage, totalResults);
-    const pageData = filteredData.slice(start, end); // Solo slice para página actual
+    const pageData = filteredData.slice(start, end);
 
     paginationInfo.textContent = t('paginationInfo')
         .replace('{start}', (start + 1).toLocaleString())
@@ -319,8 +302,6 @@ function renderResults() {
         </tr>
     `).join('');
 }
-
-// Renderizar paginación
 function renderPagination() {
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const pagination = document.getElementById('pagination');
@@ -335,7 +316,6 @@ function renderPagination() {
         </li>
     `;
 
-    // Mostrar páginas: actual +/- 2, max 5 páginas visibles
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
     for (let i = startPage; i <= endPage; i++) {
@@ -364,13 +344,11 @@ function changePage(page) {
     updateURL();
 }
 
-// Descargar JSON completo (usa data original)
 function downloadFullJSON() {
     const jsonStr = JSON.stringify(data, null, 2);
     downloadBlob(jsonStr, 'application/json', 'oui-vendors-full.json');
 }
 
-// Descargar SQL completo
 function downloadFullSQL() {
     const sql = generateSQL(data);
     downloadBlob(sql, 'application/sql', 'oui-vendors-full.sql');
