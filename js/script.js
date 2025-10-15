@@ -376,19 +376,16 @@ function downloadFullSQL() {
     downloadBlob(sql, 'application/sql', 'oui-vendors-full.sql');
 }
 
-// Descargar JSON filtrado
 function downloadJSON() {
     const jsonStr = JSON.stringify(filteredData, null, 2);
     downloadBlob(jsonStr, 'application/json', 'filtered-data.json');
 }
 
-// Descargar SQL filtrado
 function downloadSQL() {
     const sql = generateSQL(filteredData);
     downloadBlob(sql, 'application/sql', 'filtered-data.sql');
 }
 
-// Función helper para generar SQL (eficiente)
 function generateSQL(items) {
     let sql = `-- Table for IEEE IAB data
 CREATE TABLE ieee_iab_data (
@@ -406,7 +403,6 @@ CREATE TABLE ieee_iab_data (
     return sql;
 }
 
-// Función helper para download
 function downloadBlob(content, type, filename) {
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
