@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https:///alejandroHAR.github.io/sitemap.xml
+Sitemap: https://alejandrohar.github.io/oui-registry-viewer-json-sql/sitemap.xml
